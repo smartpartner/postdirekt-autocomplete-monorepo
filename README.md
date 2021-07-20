@@ -2,12 +2,6 @@
 this is a branch of netresearch/postdirekt-autocomplete-monorepo which supports building selection when 
 country, zip, city and street is selected
 
-# Postdirekt Autocomplete Metapackage
-
-
-
-This package is a monorepo for the _@netresearch/postdirekt-autocomplete-library_ and _@netresearch/postdirekt-autocomplete-sdk_ npm package.
-
 
 
 ## SDK Developer and Contribution Workflow
@@ -73,6 +67,19 @@ See [Readme](packages/autocomplete-sdk/README.md).
 This folder contains the _@netresearch/postdirekt-autocomplete-library, responsible for registering input listeners on given input fields (street address, city and postcode) and fetching address suggestions from the Autocomplete API via the autocomplete-sdk package.
 
 See [Readme](packages/autocomplete-library/README.md).
+
+```javscript
+    postDirekt = postdirektAutocompleteLib.init(
+        document.getElementById('co-shipping-form'),
+        document.getElementById('street'),
+        document.getElementById('city'),
+        document.getElementById('postcode'),
+        document.getElementById('house_nr'),
+        document.getElementById('country'),
+        'DE',
+        '_hash_'            
+    );
+```
 
 ## Testing the packages
 
