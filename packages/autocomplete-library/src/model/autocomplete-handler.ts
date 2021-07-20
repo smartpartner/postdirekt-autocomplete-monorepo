@@ -14,6 +14,8 @@ import ListRenderer from '../view/list-renderer';
 import AddressInputType from '../api/address-input-types';
 
 export default class AddressAutocomplete {
+    private readonly form: HTMLFormElement;
+
     private readonly navigationKeyCodes = ['ArrowUp', 'ArrowDown', 'Escape', 'Enter', 'Space', 'Tab'];
 
     private readonly searchService: SearchServiceInterface;
@@ -37,11 +39,13 @@ export default class AddressAutocomplete {
     private timeoutId?: number;
 
     constructor(
+        form: HTMLFormElement,
         inputMap: Map<AddressInputType, HTMLInputElement>,
         countrySelect: HTMLInputElement,
         deCountryId: string,
         token: string,
     ) {
+        this.form = form;
         this.inputMap = inputMap;
         this.countrySelect = countrySelect;
         this.deCountryId = deCountryId;
@@ -62,6 +66,22 @@ export default class AddressAutocomplete {
             fieldItem.addEventListener('autocomplete:datalist-select', this.handleDatalistSelect.bind(this));
         }
         this.countrySelect.addEventListener('change', this.handleCountryChange.bind(this));
+        this.form.addEventListener('submit', this.handleFormSubmit.bind(this));
+
+        if (this.deCountryId === this.countrySelect.value
+            && (this.domAddress.address.city.length === 0
+                || this.domAddress.address.postalCode.length === 0
+            )
+        ) {
+            const streetInput = this.inputMap.get(AddressInputType.Street);
+            if (typeof streetInput !== 'undefined') {
+                streetInput.disabled = true;
+            }
+            const houseNumber = this.inputMap.get(AddressInputType.HouseNumber);
+            if (typeof houseNumber !== 'undefined') {
+                houseNumber.disabled = true;
+            }
+        }
     }
 
     /**
@@ -94,6 +114,25 @@ export default class AddressAutocomplete {
         }
 
         this.domAddress.address = suggestedAddress;
+        const street = this.inputMap.get(AddressInputType.Street);
+        const houserNr = this.inputMap.get(AddressInputType.HouseNumber);
+
+        if (
+            this.domAddress.address.city.length === 0
+            || this.domAddress.address.postalCode.length === 0
+        ) {
+            if (street !== undefined) {
+                street.disabled = true;
+            }
+            if (houserNr !== undefined) {
+                houserNr.disabled = true;
+            }
+        } else if (street !== undefined) {
+            street.disabled = false;
+            if (houserNr !== undefined) {
+                houserNr.disabled = !this.domAddress.address.street.length;
+            }
+        }
 
         this.selectAction(suggestedAddress.uuid);
     }
@@ -104,6 +143,27 @@ export default class AddressAutocomplete {
     public handleCountryChange(): void {
         if (this.countrySelect.value !== this.deCountryId) {
             this.listRenderer.remove();
+            // eslint-disable-next-line no-param-reassign
+            this.inputMap.forEach((itm) => { itm.disabled = false; });
+        } else if (
+            this.domAddress.address.city.length === 0
+            || this.domAddress.address.postalCode.length === 0
+        ) {
+            const street = this.inputMap.get(AddressInputType.Street);
+            if (street !== undefined) {
+                street.disabled = true;
+            }
+            const houseNr = this.inputMap.get(AddressInputType.HouseNumber);
+            if (houseNr !== undefined) {
+                houseNr.disabled = true;
+            }
+        } else if (
+            this.domAddress.address.street.length === 0
+        ) {
+            const houseNr = this.inputMap.get(AddressInputType.HouseNumber);
+            if (houseNr !== undefined) {
+                houseNr.disabled = true;
+            }
         }
     }
 
@@ -130,27 +190,41 @@ export default class AddressAutocomplete {
      */
     private searchAction(currentField: HTMLInputElement): void {
         const addressData = this.domAddress.address;
-        const subject: SearchSubject = addressData.street
-            ? SearchSubject.PostalCodesCitiesStreets
-            : SearchSubject.PostalCodesCities;
+        let subject = SearchSubject.PostalCodesCities;
+        if (addressData.houseNumber) {
+            subject = SearchSubject.Buildings;
+        } else if (addressData.street) {
+            subject = SearchSubject.PostalCodesCitiesStreets;
+        } else {
+            subject = SearchSubject.PostalCodesCities;
+        }
 
         if (Object.values(addressData).join('').trim() === '') {
             return;
         }
 
+        // eslint-disable-next-line prefer-const
+        let searchOptions = {
+            country: 'de',
+            subject: subject,
+            combined: Object.values(addressData).join(' '),
+            address_type: AddressType.A,
+        };
+
+
         this.searchService.search(
             this.searchService.requestBuilder.create(
-                {
-                    country: 'de',
-                    subject,
-                    combined: Object.values(addressData).join(' '),
-                    address_type: AddressType.A,
-                },
+                searchOptions,
             ),
         ).then((response: SearchResponse) => {
+            const addresses:Address[]|undefined = response.buildings || response.addresses;
+
+            if (addresses === undefined) {
+                return;
+            }
             // Map search service response into AddressData array
             // and store them in suggestions model
-            this.addressSuggestions.suggestions = response.addresses
+            this.addressSuggestions.suggestions = addresses
                 .filter((address: Address) => !!address.uuid)
                 .map(
                     (address: Address) => ({
@@ -159,6 +233,7 @@ export default class AddressAutocomplete {
                         city: address.city || '',
                         uuid: address.uuid,
                         district: address.district,
+                        houseNumber: address.houseNumber || '',
                     }),
                 );
 
@@ -176,12 +251,74 @@ export default class AddressAutocomplete {
      * Executes a select request at the Autocomplete API.
      */
     private selectAction(uuid: string): void {
+        let req = {
+            country: 'de',
+            subject: SearchSubject.PostalCodesCitiesStreets,
+            uuid,
+        };
+        if (this.domAddress.address.houseNumber.length !== 0) {
+            req.subject = SearchSubject.Buildings
+        }
         this.selectService.select(
-            this.selectService.requestBuilder.create(
+            this.selectService.requestBuilder.create(req),
+        );
+    }
+
+    private handleFormSubmit(e: Event): void {
+        if (this.deCountryId !== this.countrySelect.value) {
+            return ;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+        const addr = this.domAddress.address;
+        
+
+        if (addr.city.length === 0
+            || addr.postalCode.length === 0
+            || addr.houseNumber.length === 0
+            || addr.street.length === 0
+        ) {
+            this.form.dispatchEvent(new Event("autocomplete:validation-error", {
+                "bubbles": false,
+                "cancelable": false,
+            }));
+
+            return;
+        }
+
+
+        this.check().then((resp: SearchResponse) => {
+            if (!resp.buildings?.length) {
+                this.form.dispatchEvent(new Event("autocomplete:validation-error", {
+                    "bubbles": false,
+                    "cancelable": false,
+                }));
+                return;
+            } else {
+                for (let building of resp.buildings) {
+                    if (building.city === addr.city
+                        && building.postalCode === addr.postalCode
+                        && building.street === addr.street
+                        && building.houseNumber === addr.houseNumber
+                    ) {
+                        this.form.submit();
+                        return;
+                    }
+                }
+            }
+        });
+    }
+
+    private check():Promise<SearchResponse> {
+        const addressData = this.domAddress.address;
+        return this.searchService.search(
+            this.searchService.requestBuilder.create(
                 {
                     country: 'de',
-                    subject: SearchSubject.PostalCodesCitiesStreets,
-                    uuid,
+                    subject: SearchSubject.Buildings,
+                    combined: Object.values(addressData).join(' '),
+                    address_type: AddressType.A,
                 },
             ),
         );

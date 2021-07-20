@@ -9,6 +9,7 @@ enum AddressInputType {
     City = 'city',
     Street = 'street',
     PostalCode = 'postalCode',
+    HouseNumber = 'houseNumber',
 }
 
 export default AddressInputType;

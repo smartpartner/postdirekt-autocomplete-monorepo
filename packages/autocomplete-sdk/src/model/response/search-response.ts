@@ -2,7 +2,8 @@
  * See LICENSE.txt for license details.
  */
 export default interface SearchResponse {
-    addresses: Address[];
+    addresses?: Address[];
+    buildings?: Address[];
 }
 
 export interface Address {
@@ -12,4 +13,5 @@ export interface Address {
     street?: string;
     addressType?: string;
     district?: string;
+    houseNumber?: string;
 }

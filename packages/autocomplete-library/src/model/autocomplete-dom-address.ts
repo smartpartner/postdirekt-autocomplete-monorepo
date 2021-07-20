@@ -19,7 +19,7 @@ export default class AutocompleteDomAddress {
      * Read current address input values from DOM.
      */
     get address(): DomAddressData {
-        const result: DomAddressData = { city: '', postalCode: '', street: '' };
+        const result: DomAddressData = { city: '', postalCode: '', street: '', houseNumber: '' };
         /**
          * Note that type safety is guaranteed by the DomAddressData properties
          * being constructed from the AddressInputType enum, same with the inputMap keys.

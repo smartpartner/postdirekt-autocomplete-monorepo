@@ -37,7 +37,12 @@ export default class ListRenderer {
         addressSuggestions.map((addressData: AddressData) => (
             {
                 id: addressData.uuid,
-                title: [addressData.street, addressData.postalCode, addressData.city].filter(Boolean).join(', '),
+                title: [
+                    addressData.street, 
+                    addressData.houseNumber, 
+                    Boolean(addressData.houseNumber) ? false : addressData.postalCode, 
+                    Boolean(addressData.houseNumber) ? false : addressData.city
+                ].filter(Boolean).join(', '),
             }
         ))
             // Create HTML list of AddressSuggestionOptions
