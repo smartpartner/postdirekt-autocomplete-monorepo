@@ -1,6 +1,6 @@
 {
     "name": "postdirekt-autocomplete-monorepo",
-    "private": true,
+    "private": false,
     "workspaces": [
         "packages/*"
     ],
