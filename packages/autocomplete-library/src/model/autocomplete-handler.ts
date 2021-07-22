@@ -39,13 +39,12 @@ export default class AddressAutocomplete {
     private timeoutId?: number;
 
     constructor(
-        form: HTMLFormElement,
         inputMap: Map<AddressInputType, HTMLInputElement>,
         countrySelect: HTMLInputElement,
         deCountryId: string,
         token: string,
     ) {
-        this.form = form;
+        this.form = countrySelect.form || new HTMLFormElement();
         this.inputMap = inputMap;
         this.countrySelect = countrySelect;
         this.deCountryId = deCountryId;
@@ -300,7 +299,7 @@ export default class AddressAutocomplete {
                     if (building.city === addr.city
                         && building.postalCode === addr.postalCode
                         && building.street === addr.street
-                        && building.houseNumber === addr.houseNumber
+                        // && building.houseNumber === addr.houseNumber
                     ) {
                         this.form.submit();
                         return;

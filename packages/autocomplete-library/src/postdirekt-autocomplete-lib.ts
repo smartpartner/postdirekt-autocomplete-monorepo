@@ -5,7 +5,6 @@ import AddressAutocomplete from './model/autocomplete-handler';
 import AddressInputType from './api/address-input-types';
 
 const init = (
-    form: HTMLFormElement,
     streetInput: HTMLInputElement,
     cityInput: HTMLInputElement,
     postalCodeInput: HTMLInputElement,
@@ -15,7 +14,6 @@ const init = (
     token: string,
 ): AddressAutocomplete => {
     const autocomplete = new AddressAutocomplete(
-        form,
         new Map([
             [AddressInputType.Street, streetInput],
             [AddressInputType.PostalCode, postalCodeInput],
